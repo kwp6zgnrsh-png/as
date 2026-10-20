@@ -17,6 +17,6 @@ public class TechnicianSkill {
     private Long technicianId;
 
     @Id
-    @Column(nullable = false)
-    private String category;
+    @Column(name = "product_type") // DB 컬럼명 명시
+    private String productType;    // category 대신 productType 사용
 }

@@ -8,5 +8,5 @@ import java.io.Serializable;
 @EqualsAndHashCode
 public class TechnicianSkillId implements Serializable {
     private Long technicianId;
-    private String category;
+    private String productType;
 }
