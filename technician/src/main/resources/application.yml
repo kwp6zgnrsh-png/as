@@ -1,0 +1,17 @@
+server:
+  port: 8082  # 기사 서버는 8082 포트 사용
+
+spring:
+  datasource:
+    url: jdbc:mysql://172.21.26.80:3306/service_db?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    username: technician_app
+    password: technician
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 테이블 자동 생성 및 수정
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
