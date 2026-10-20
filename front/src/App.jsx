@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-const regions = ['서울특별시', '부산광역시']
+const regions = [
+  { code: 'SEOUL', name: '서울특별시' },
+  { code: 'BUSAN', name: '부산광역시' },
+]
 
 function getLocalDateTime() {
   const now = new Date()
@@ -11,7 +14,10 @@ function getLocalDateTime() {
 
 function App() {
   const privacyDialog = useRef(null)
+  const submissionInFlight = useRef(false)
   const [notice, setNotice] = useState('')
+  const [noticeType, setNoticeType] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [products, setProducts] = useState([])
   const [productStatus, setProductStatus] = useState('loading')
 
@@ -51,22 +57,79 @@ function App() {
       ? '제품 목록을 불러오지 못했습니다.'
       : products.length === 0 ? '등록된 제품이 없습니다.' : '제품을 선택하세요'
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
-    const visitDateTime = event.currentTarget.elements.visitDateTime
+    if (submissionInFlight.current) return
+
+    const form = event.currentTarget
+    const visitDateTime = form.elements.visitDateTime
     // 페이지를 오래 열어 둔 경우에도 지난 시간으로 신청하지 않도록 확인합니다.
     if (new Date(visitDateTime.value).getTime() <= Date.now()) {
       visitDateTime.setCustomValidity('현재 시간 이후의 희망 방문 일시를 선택해 주세요.')
       visitDateTime.reportValidity()
       return
     }
-    setNotice('입력 내용을 확인했습니다. 현재는 화면 구현 단계로, 실제 AS 접수는 전송되지 않습니다.')
+    const values = new FormData(form)
+    const request = {
+      productId: Number(values.get('product')),
+      customerName: values.get('customerName').trim(),
+      phone: values.get('phone').trim(),
+      region: values.get('region'),
+      visitDateTime: values.get('visitDateTime'),
+      memo: values.get('memo').trim(),
+    }
+
+    if (!Number.isSafeInteger(request.productId) || request.productId <= 0) {
+      setNotice('제품을 선택해 주세요.')
+      setNoticeType('error')
+      return
+    }
+
+    submissionInFlight.current = true
+    setIsSubmitting(true)
+    setNotice('신청 내용을 전송하고 있습니다.')
+    setNoticeType('')
+
+    try {
+      const response = await fetch('/api/repairs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message = typeof result?.message === 'string' ? result.message : result?.detail
+        throw new Error(typeof message === 'string' && message
+          ? message
+          : `AS 신청을 처리하지 못했습니다. (오류 ${response.status})`)
+      }
+
+      if (!result || (result.requestId == null && !result.requestNo)) {
+        throw new Error('접수 응답을 확인할 수 없습니다. 접수 내역을 확인해 주세요.')
+      }
+
+      const receipt = result.requestNo ? `접수번호: ${result.requestNo}` : `접수 ID: ${result.requestId}`
+      setNotice(`AS 접수가 완료되었습니다. ${receipt}`)
+      setNoticeType('success')
+    } catch (error) {
+      setNotice(error instanceof TypeError
+        ? '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+        : error.message || 'AS 신청 중 오류가 발생했습니다.')
+      setNoticeType('error')
+    } finally {
+      submissionInFlight.current = false
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <main className="application-page">
       <h1 className="sr-only">가전제품 AS 상담 신청</h1>
-      <form className="application-form" onSubmit={handleSubmit} onChange={() => setNotice('')}>
+      <form className="application-form" onSubmit={handleSubmit} onChange={() => {
+        setNotice('')
+        setNoticeType('')
+      }}>
         <div className="form-fields">
           <div className="form-row">
             <label className="field-label" htmlFor="product">제품분류</label>
@@ -102,7 +165,7 @@ function App() {
               <div className="select-wrap region-select">
                 <select id="region" name="region" defaultValue="" required>
                   <option value="" disabled>시도 선택</option>
-                  {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+                  {regions.map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
                 </select>
               </div>
             </div>
@@ -129,14 +192,14 @@ function App() {
             </label>
             <button className="privacy-button" type="button" onClick={() => privacyDialog.current.showModal()}>[전문보기]</button>
           </div>
-          <button className="submit-button" type="submit" disabled={products.length === 0}>
+          <button className="submit-button" type="submit" disabled={products.length === 0 || isSubmitting} aria-busy={isSubmitting}>
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
               <path d="M14 5H6a2 2 0 0 0-2 2v21a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2V17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               <path d="m13 22 2-7L26 4a2.8 2.8 0 0 1 4 4L19 19l-6 3ZM23 7l4 4M15 15l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            신청하기
+            {isSubmitting ? '신청 중...' : '신청하기'}
           </button>
-          <p className="submission-notice" role="status">{notice}</p>
+          <p className="submission-notice" data-status={noticeType} role="status">{notice}</p>
         </div>
       </form>
       <dialog className="privacy-dialog" ref={privacyDialog} aria-labelledby="privacy-title" onClick={(event) => {
@@ -148,7 +211,7 @@ function App() {
           <dt>수집 목적</dt><dd>AS 상담 접수 및 방문 일정 안내</dd>
           <dt>수집 항목</dt><dd>신청자명, 연락처, 지역, 희망 방문 일시, 메모사항</dd>
         </dl>
-        <p>현재 입력 정보는 서버로 전송되거나 저장되지 않습니다. 메모에는 상담에 필요한 내용만 입력해 주세요.</p>
+        <p>입력하신 정보는 AS 상담 접수와 방문 일정 안내를 위해 서버로 전송됩니다. 메모에는 상담에 필요한 내용만 입력해 주세요.</p>
         <form method="dialog"><button className="dialog-close" autoFocus>닫기</button></form>
       </dialog>
     </main>

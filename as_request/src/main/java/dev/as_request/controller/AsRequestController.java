@@ -6,7 +6,9 @@ import dev.as_request.dto.RepairResponse;
 import dev.as_request.service.ProductService;
 import dev.as_request.service.RepairService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -30,8 +32,8 @@ public class AsRequestController {
 
     @PostMapping("/repairs")
     @ResponseStatus(HttpStatus.CREATED)
-    public RepairResponse createRepair(@RequestBody CreateRepairRequest request) {
-        return repairService.createRepair(request);
+    public ResponseEntity<RepairResponse> createRepair(@RequestBody CreateRepairRequest request) {
+        return ResponseEntity.ok(repairService.createRepair(request));
     }
 
     @GetMapping("/repairs")

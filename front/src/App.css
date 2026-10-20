@@ -112,6 +112,8 @@
 .submit-button:disabled { background: #aaa; cursor: not-allowed; }
 .submission-notice { max-width: 520px; margin: 16px 0 0; color: #555; font-size: 14px; text-align: center; line-height: 1.7; }
 .submission-notice:empty { display: none; }
+.submission-notice[data-status='error'] { color: #b42318; }
+.submission-notice[data-status='success'] { color: #237a17; }
 .privacy-dialog { width: min(480px, calc(100% - 40px)); max-height: calc(100% - 48px); padding: 30px; border: 1px solid #ccc; color: #333; line-height: 1.7; }
 .privacy-dialog::backdrop { background: rgb(0 0 0 / 40%); }
 .privacy-dialog h2 { margin: 0 0 16px; font-size: 22px; }

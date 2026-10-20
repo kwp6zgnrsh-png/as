@@ -14,3 +14,6 @@ spring:
 
 product-service:
   base-url: ${PRODUCT_SERVICE_URL:http://172.21.33.68:8080}
+
+technician-service:
+  base-url: ${PRODUCT_SERVICE_URL:http://172.21.33.29:8082}
