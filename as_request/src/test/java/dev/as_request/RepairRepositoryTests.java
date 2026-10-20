@@ -2,6 +2,7 @@ package dev.as_request;
 
 import dev.as_request.dto.CreateRepairRequest;
 import dev.as_request.dto.RepairResponse;
+import dev.as_request.dto.RepairListResponse;
 import dev.as_request.repository.RepairRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,15 +54,15 @@ class RepairRepositoryTests {
     @Test
     void savesFrontendInputAndExplicitProductAndTechnicianIds() {
         CreateRepairRequest request = new CreateRepairRequest(
-                999L, "테스트고객", "01000000001", "서울특별시",
-                LocalDateTime.now().plusDays(1), "전원이 켜지지 않습니다. '오류' 표시\n방문 전 연락 바랍니다."
+                999L, "테스트고객", "01000000001", "SEOUL",
+                LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0), "전원이 켜지지 않습니다. '오류' 표시\n방문 전 연락 바랍니다."
         );
 
         RepairResponse saved = repository.save(request, 101L, 701L);
-        List<RepairResponse> rows = repository.findAll();
+        List<RepairListResponse> rows = repository.findAll();
 
         assertEquals(1, rows.size());
-        assertEquals(saved, rows.getFirst());
+        assertEquals(toListResponse(saved), rows.getFirst());
         assertEquals("AS-" + saved.requestId(), saved.requestNo());
         assertEquals(request.customerName(), saved.customerName());
         assertEquals(request.phone(), saved.phone());
@@ -91,7 +92,7 @@ class RepairRepositoryTests {
 
         assertNull(saved.symptom());
         assertNull(saved.technicianId());
-        assertEquals(saved, repository.findAll().getFirst());
+        assertEquals(toListResponse(saved), repository.findAll().getFirst());
     }
 
     @Test
@@ -107,9 +108,14 @@ class RepairRepositoryTests {
         assertEquals(0L, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM as_request", Long.class));
     }
 
+    private RepairListResponse toListResponse(RepairResponse response) {
+        return new RepairListResponse(response.requestNo(), response.customerName(), response.phone(),
+                response.region(), response.symptom(), response.status(), response.createdAt());
+    }
+
     private CreateRepairRequest request(String memo) {
-        return new CreateRepairRequest(1L, "테스트고객", "01000000001", "서울특별시",
-                LocalDateTime.now().plusDays(1), memo);
+        return new CreateRepairRequest(1L, "테스트고객", "01000000001", "SEOUL",
+                LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0), memo);
     }
 
     @Configuration

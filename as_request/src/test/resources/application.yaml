@@ -10,3 +10,6 @@ spring:
 
 product-service:
   base-url: http://product-service.test
+
+technician-service:
+  base-url: http://technician-service.test

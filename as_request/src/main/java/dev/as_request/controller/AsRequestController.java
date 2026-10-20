@@ -1,14 +1,21 @@
 package dev.as_request.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
+import dev.as_request.dto.RepairListResponse;
+import dev.as_request.dto.RepairHistoryRequest;
+import jakarta.validation.Valid;
 import dev.as_request.dto.CreateRepairRequest;
 import dev.as_request.dto.ProductResponse;
 import dev.as_request.dto.RepairResponse;
 import dev.as_request.service.ProductService;
 import dev.as_request.service.RepairService;
+
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.RepresentationModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -26,18 +33,32 @@ public class AsRequestController {
     }
 
     @GetMapping("/products")
-    public List<ProductResponse> getProducts() {
-        return productService.getProducts();
+    public ResponseEntity<List<ProductResponse>> getProducts() {
+        List<ProductResponse> products = productService.getProducts();
+        return ResponseEntity.ok(products);
     }
 
-    @PostMapping("/repairs")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<RepairResponse> createRepair(@RequestBody CreateRepairRequest request) {
-        return ResponseEntity.ok(repairService.createRepair(request));
+    @PostMapping(value = "/repairs", produces = MediaTypes.HAL_JSON_VALUE)
+    public ResponseEntity<RepresentationModel<?>> createRepair(@RequestBody @Valid CreateRepairRequest request) {
+
+        repairService.createRepair(request);
+
+        RepresentationModel<?> response = new RepresentationModel<>();
+
+        response.add(linkTo(methodOn(AsRequestController.class).getMyRepairs(null)).withRel("search-repairs"));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/repairs/search")
+    public ResponseEntity<List<RepairListResponse>> getMyRepairs(
+        @Valid @RequestBody RepairHistoryRequest request) {
+        return ResponseEntity.ok(repairService.getMyRepairs(request));
     }
 
     @GetMapping("/repairs")
-    public List<RepairResponse> getRepairs() {
-        return repairService.getRepairs();
+    public ResponseEntity<List<RepairListResponse>> getRepairs() {
+        List<RepairListResponse> repairs = repairService.getRepairs();
+        return ResponseEntity.ok(repairs);
     }
 }

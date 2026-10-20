@@ -8,7 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import dev.as_request.exception.ProductServiceException;
 
 import java.util.List;
 
@@ -44,7 +44,7 @@ class ProductServiceTests {
     void propagatesMissingProductError() {
         server.expect(requestTo("http://product-service.test/api/products/999"))
                 .andRespond(withResourceNotFound());
-        assertThrows(RestClientException.class, () -> productService.getProduct(999L));
+        assertThrows(ProductServiceException.class, () -> productService.getProduct(999L));
         server.verify();
     }
 
@@ -52,7 +52,7 @@ class ProductServiceTests {
     void rejectsMissingProductDetailBody() {
         server.expect(requestTo("http://product-service.test/api/products/1"))
                 .andRespond(withNoContent());
-        assertThrows(RestClientException.class, () -> productService.getProduct(1L));
+        assertThrows(ProductServiceException.class, () -> productService.getProduct(1L));
         server.verify();
     }
 
@@ -82,7 +82,7 @@ class ProductServiceTests {
     void propagatesUpstreamErrorForGlobalExceptionHandler() {
         server.expect(requestTo("http://product-service.test/api/products"))
                 .andRespond(withServerError());
-        assertThrows(RestClientException.class, productService::getProducts);
+        assertThrows(ProductServiceException.class, productService::getProducts);
         server.verify();
     }
 
@@ -90,7 +90,7 @@ class ProductServiceTests {
     void rejectsMissingResponseBody() {
         server.expect(requestTo("http://product-service.test/api/products"))
                 .andRespond(withNoContent());
-        assertThrows(RestClientException.class, productService::getProducts);
+        assertThrows(ProductServiceException.class, productService::getProducts);
         server.verify();
     }
 }

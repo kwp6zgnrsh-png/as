@@ -4,18 +4,20 @@ import dev.as_request.dto.AssignmentRequest;
 import dev.as_request.dto.AssignmentResponse;
 import dev.as_request.dto.CreateRepairRequest;
 import dev.as_request.dto.ProductResponse;
+import dev.as_request.dto.RepairListResponse;
+import dev.as_request.dto.RepairHistoryRequest;
 import dev.as_request.dto.RepairResponse;
 import dev.as_request.dto.TechnicianResponse;
 import dev.as_request.repository.RepairRepository;
+import dev.as_request.exception.AssignmentFailedException;
+import dev.as_request.exception.ProductServiceException;
+import dev.as_request.exception.TechnicianNotFoundException;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class RepairService {
@@ -31,31 +33,26 @@ public class RepairService {
         this.technicianService = technicianService;
     }
 
-    public RepairResponse createRepair(CreateRepairRequest request) {
-        if(productService.getProduct(request.productId()) == null) {
-            throw new RuntimeException("Product not found");
-        }
+    public void createRepair(CreateRepairRequest request) {
 
         ProductResponse product = productService.getProduct(request.productId());
 
-        LocalDateTime visitDateTime = request.visitDateTime();
+        if(product == null) {
+            throw new ProductServiceException("제품 정보를 가져올 수 없습니다.");
+        }
 
-        String timeSlot = visitDateTime.getHour() < 12 ? "MORNING" : "AFTERNOON";
+        String timeSlot = request.visitDateTime().getHour() < 12 ? "MORNING" : "AFTERNOON";
 
         List<TechnicianResponse> technicians =
             technicianService.getAvailableTechnicians(
                 request.region(),
                 product.productType(),
-                visitDateTime.toLocalDate(),
+                request.visitDateTime().toLocalDate(),
                 timeSlot
             );
 
-        for (TechnicianResponse technician : technicians) {
-            System.out.println(technician);
-        }
-
-        if(technicians.isEmpty()) {
-            throw new RuntimeException("Technician not found");
+        if (technicians.isEmpty()) {
+            throw new TechnicianNotFoundException();
         }
 
         Long technicianId = technicians.getFirst().technicianId();
@@ -71,12 +68,18 @@ public class RepairService {
             )
         );
 
-        System.out.println(assignmentResponse);
+        if(assignmentResponse == null) {
+            throw new AssignmentFailedException("기사 배정 응답 본문이 비어 있습니다.");
+        }
 
-        return repairResponse;
+        repairRepository.updateStatus(repairResponse.requestId(), "ASSIGNED");
     }
 
-    public List<RepairResponse> getRepairs() {
+    public List<RepairListResponse> getMyRepairs(RepairHistoryRequest request) {
+        return repairRepository.findByCustomerNameAndPhone(request.customerName(), request.phone());
+    }
+
+    public List<RepairListResponse> getRepairs() {
         return repairRepository.findAll();
     }
 

@@ -63,9 +63,19 @@ function App() {
 
     const form = event.currentTarget
     const visitDateTime = form.elements.visitDateTime
+    const visit = new Date(visitDateTime.value)
     // 페이지를 오래 열어 둔 경우에도 지난 시간으로 신청하지 않도록 확인합니다.
-    if (new Date(visitDateTime.value).getTime() <= Date.now()) {
+    if (!Number.isFinite(visit.getTime()) || visit.getTime() <= Date.now()) {
       visitDateTime.setCustomValidity('현재 시간 이후의 희망 방문 일시를 선택해 주세요.')
+      visitDateTime.reportValidity()
+      return
+    }
+
+    const minutes = visit.getHours() * 60 + visit.getMinutes()
+    const morning = minutes >= 9 * 60 && minutes < 12 * 60
+    const afternoon = minutes >= 13 * 60 && minutes < 18 * 60
+    if (!morning && !afternoon) {
+      visitDateTime.setCustomValidity('방문 시간은 09:00 이상 12:00 미만 또는 13:00 이상 18:00 미만으로 선택해 주세요.')
       visitDateTime.reportValidity()
       return
     }
@@ -147,16 +157,19 @@ function App() {
           <div className="form-row">
             <label className="field-label" htmlFor="customerName">신청자명</label>
             <div className="field-content">
-              <input className="short-input" id="customerName" name="customerName" type="text" autoComplete="name" maxLength={50} required
-                onChange={(event) => event.target.setCustomValidity(event.target.value.trim() ? '' : '신청자명을 입력해 주세요.')} />
+              <input className="short-input" id="customerName" name="customerName" type="text" autoComplete="name" minLength={2} maxLength={8} required
+                onChange={(event) => {
+                  const length = event.target.value.trim().length
+                  event.target.setCustomValidity(length >= 2 && length <= 8 ? '' : '신청자명은 2자 이상 8자 이하로 입력해 주세요.')
+                }} />
             </div>
           </div>
           <div className="form-row">
             <label className="field-label" htmlFor="phone">연락처</label>
             <div className="field-content">
               <input className="short-input" id="phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel-national"
-                placeholder="연락처를 '-' 제외하고 입력하세요." pattern="0[0-9]{8,10}"
-                title="0으로 시작하는 9~11자리 연락처를 숫자만 입력해 주세요." maxLength={11} required />
+                placeholder="010으로 시작하는 11자리 숫자" pattern="010[0-9]{8}"
+                title="연락처는 하이픈 없이 010으로 시작하는 11자리 숫자로 입력해 주세요." maxLength={11} required />
             </div>
           </div>
           <div className="form-row">
@@ -180,7 +193,7 @@ function App() {
           <div className="form-row memo-row">
             <label className="field-label" htmlFor="memo">고장 증상</label>
             <div className="field-content">
-              <textarea id="memo" name="memo" maxLength={2000} aria-label="메모사항 (고장 증상 및 요청사항)" />
+              <textarea id="memo" name="memo" maxLength={1000} aria-label="메모사항 (고장 증상 및 요청사항)" />
             </div>
           </div>
         </div>

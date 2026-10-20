@@ -1,6 +1,7 @@
 package dev.as_request.repository;
 
 import dev.as_request.dto.CreateRepairRequest;
+import dev.as_request.dto.RepairListResponse;
 import dev.as_request.dto.RepairResponse;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -75,26 +76,55 @@ public class RepairRepository {
         );
     }
 
-    public List<RepairResponse> findAll() {
+    public void updateStatus(Long requestId, String status) {
+        int updated = jdbcTemplate.update(
+                "UPDATE as_request SET status = ? WHERE request_id = ?",
+                status, requestId
+        );
+        if (updated != 1) {
+            throw new DataRetrievalFailureException("접수 상태를 변경하지 못했습니다.");
+        }
+    }
+
+    public List<RepairListResponse> findByCustomerNameAndPhone(String customerName, String phone) {
         String sql = """
-                SELECT request_id, request_no, customer_name, phone, product_id,
-                       region, symptom, technician_id, status, created_at
+                SELECT request_no, customer_name, phone,
+                       region, symptom, status, created_at
                 FROM as_request
+                WHERE customer_name = ? AND phone = ?
                 ORDER BY created_at DESC, request_id DESC
                 """;
 
-        return jdbcTemplate.query(sql, (rs, rowNum) -> new RepairResponse(
-                rs.getLong("request_id"),
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new RepairListResponse(
                 rs.getString("request_no"),
                 rs.getString("customer_name"),
                 rs.getString("phone"),
-                rs.getLong("product_id"),
                 rs.getString("region"),
                 rs.getString("symptom"),
-                rs.getObject("technician_id", Long.class),
                 rs.getString("status"),
                 rs.getObject("created_at", LocalDateTime.class)
-        ));
+        ), customerName, phone);
+    }
+
+    public List<RepairListResponse> findAll() {
+        String sql = """
+            SELECT request_no, customer_name, phone,
+                   region, symptom, status, created_at
+            FROM as_request
+            ORDER BY created_at DESC, request_id DESC
+            """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RepairListResponse(
+                rs.getString("request_no"),
+                rs.getString("customer_name"),
+                rs.getString("phone"),
+                rs.getString("region"),
+                rs.getString("symptom"),
+                rs.getString("status"),
+                rs.getObject("created_at", LocalDateTime.class)
+            )
+        );
     }
 
 
