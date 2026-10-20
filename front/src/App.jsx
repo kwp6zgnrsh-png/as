@@ -1,9 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-// 서버 연결 전 사용하는 예시 분류입니다. 제품 API 응답으로 교체할 수 있습니다.
-const products = ['정수기', '공기청정기', '비데', '식기세척기', '인덕션', '가스레인지', '에어컨', '냉장고', '세탁기', '기타']
-const regions = ['서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시', '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원특별자치도', '충청북도', '충청남도', '전북특별자치도', '전라남도', '경상북도', '경상남도', '제주특별자치도']
+const regions = ['서울특별시', '부산광역시']
 
 function getLocalDateTime() {
   const now = new Date()
@@ -14,6 +12,44 @@ function getLocalDateTime() {
 function App() {
   const privacyDialog = useRef(null)
   const [notice, setNotice] = useState('')
+  const [products, setProducts] = useState([])
+  const [productStatus, setProductStatus] = useState('loading')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadProducts() {
+      try {
+        // Vite 프록시를 통해 로컬 AS 접수 백엔드의 GET /api/products를 호출합니다.
+        const response = await fetch('/api/products', { signal: controller.signal })
+        if (!response.ok) throw new Error('제품 목록 조회 실패')
+
+        const data = await response.json()
+        if (!Array.isArray(data) || data.some((product) => (
+          !product || product.productId == null ||
+          typeof product.productName !== 'string' || !product.productName.trim()
+        ))) {
+          throw new Error('제품 목록 응답 형식 오류')
+        }
+
+        if (!controller.signal.aborted) {
+          setProducts(data)
+          setProductStatus('success')
+        }
+      } catch {
+        if (!controller.signal.aborted) setProductStatus('error')
+      }
+    }
+
+    loadProducts()
+    return () => controller.abort()
+  }, [])
+
+  const productPlaceholder = productStatus === 'loading'
+    ? '제품 목록을 불러오는 중입니다.'
+    : productStatus === 'error'
+      ? '제품 목록을 불러오지 못했습니다.'
+      : products.length === 0 ? '등록된 제품이 없습니다.' : '제품을 선택하세요'
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -36,9 +72,11 @@ function App() {
             <label className="field-label" htmlFor="product">제품분류</label>
             <div className="field-content">
               <div className="select-wrap product-select">
-                <select id="product" name="product" defaultValue="" required>
-                  <option value="" disabled>제품을 선택하세요</option>
-                  {products.map((product) => <option key={product} value={product}>{product}</option>)}
+                <select id="product" name="product" defaultValue="" required disabled={products.length === 0} aria-busy={productStatus === 'loading'}>
+                  <option value="" disabled>{productPlaceholder}</option>
+                  {products.map((product) => (
+                    <option key={product.productId} value={product.productId}>{product.productName}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -91,7 +129,7 @@ function App() {
             </label>
             <button className="privacy-button" type="button" onClick={() => privacyDialog.current.showModal()}>[전문보기]</button>
           </div>
-          <button className="submit-button" type="submit">
+          <button className="submit-button" type="submit" disabled={products.length === 0}>
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
               <path d="M14 5H6a2 2 0 0 0-2 2v21a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2V17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               <path d="m13 22 2-7L26 4a2.8 2.8 0 0 1 4 4L19 19l-6 3ZM23 7l4 4M15 15l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />

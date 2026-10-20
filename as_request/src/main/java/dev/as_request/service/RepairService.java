@@ -2,41 +2,46 @@ package dev.as_request.service;
 
 import dev.as_request.dto.CreateRepairRequest;
 import dev.as_request.dto.RepairResponse;
+import dev.as_request.repository.RepairRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class RepairService {
 
-    // TODO: 접수 DB 연결 시 이 임시 저장소를 Repository로 교체합니다.
-    // 서버를 재시작하면 접수 내역은 초기화됩니다.
-    private final ConcurrentLinkedDeque<RepairResponse> repairs = new ConcurrentLinkedDeque<>();
+    private final RepairRepository repairRepository;
+    private final ProductService productService;
+    // POST는 아직 DB에 저장하지 않는 임시 응답입니다.
     private final AtomicLong sequence = new AtomicLong();
+
+    public RepairService(RepairRepository repairRepository, ProductService productService) {
+        this.repairRepository = repairRepository;
+        this.productService = productService;
+    }
 
     public RepairResponse createRepair(CreateRepairRequest request) {
         validate(request);
-        // TODO: 제품 서버 연동 시 productId의 존재 여부를 API로 확인합니다.
+        productService.getProduct(request.productId());
         RepairResponse response = new RepairResponse(
                 sequence.incrementAndGet(),
-                request.productId(),
+                null,
                 request.customerName().trim(),
                 request.phone(),
+                request.productId(),
                 request.region().trim(),
-                request.visitDateTime(),
                 request.memo() == null ? "" : request.memo().trim(),
+                null,
                 "RECEIVED",
                 LocalDateTime.now()
         );
-        repairs.addFirst(response);
         return response;
     }
 
     public List<RepairResponse> getRepairs() {
-        return List.copyOf(repairs);
+        return repairRepository.findAll();
     }
 
     private void validate(CreateRepairRequest request) {
