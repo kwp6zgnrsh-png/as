@@ -1,5 +1,6 @@
 package com.example.technician_server.controller;
 
+
 import com.example.technician_server.domain.Assignment;
 import com.example.technician_server.repository.AssignmentRepository;
 import lombok.AllArgsConstructor;
@@ -7,14 +8,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/assignments")
@@ -26,13 +25,15 @@ public class TechnicianController {
         this.assignmentRepository = assignmentRepository;
     }
 
+    /**
+     * 기사 배정 등록 (구체적 방문 시간 LocalTime 수신)
+     */
     @PostMapping
     public ResponseEntity<Assignment> assignTechnician(@RequestBody AssignmentRequest request) {
         if (assignmentRepository.findByRequestId(request.getRequestId()).isPresent()) {
             return ResponseEntity.badRequest().build();
         }
 
-        // 요청받은 날짜(date)와 구체적인 시간(time)을 조합하여 저장
         LocalDateTime assignedAt = LocalDateTime.of(request.getDate(), request.getTime());
 
         Assignment assignment = new Assignment();
@@ -46,7 +47,16 @@ public class TechnicianController {
     }
 
     /**
-     * 기사 배정 요청 DTO (TimeSlot 대신 구체적인 time 받기)
+     * 전체 배정 목록 조회
+     */
+    @GetMapping
+    public ResponseEntity<List<Assignment>> getAllAssignments() {
+        List<Assignment> assignments = assignmentRepository.findAll();
+        return ResponseEntity.ok(assignments);
+    }
+
+    /**
+     * 기사 배정 요청 DTO
      */
     @Getter
     @Setter
