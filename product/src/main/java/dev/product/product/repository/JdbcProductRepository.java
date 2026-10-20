@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public class JdbcProductRepository implements ProductRepository {
@@ -13,6 +14,19 @@ public class JdbcProductRepository implements ProductRepository {
 
     public JdbcProductRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return jdbcTemplate.query("""
+                SELECT product_id, product_name, product_type
+                FROM product
+                ORDER BY product_id
+                """, (rs, rowNum) -> new Product(
+                rs.getLong("product_id"),
+                rs.getString("product_name"),
+                rs.getString("product_type")
+        ));
     }
 
     @Override

@@ -6,6 +6,7 @@ import dev.product.product.exception.InvalidProductIdException;
 import dev.product.product.exception.ProductNotFoundException;
 import dev.product.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class ProductService {
@@ -24,6 +25,16 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(ProductNotFoundException::new);
 
+        return toResponse(product);
+    }
+
+    public List<ProductResponse> getProducts() {
+        return productRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private ProductResponse toResponse(Product product) {
         return new ProductResponse(
                 product.productId(),
                 product.productName(),
