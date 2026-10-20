@@ -1,40 +1,49 @@
 package com.example.technician_server.controller;
 
-
 import com.example.technician_server.domain.Assignment;
+import com.example.technician_server.domain.Technician;
 import com.example.technician_server.repository.AssignmentRepository;
+import com.example.technician_server.repository.TechnicianRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/assignments")
+@RequestMapping("/api")
 public class TechnicianController {
 
     private final AssignmentRepository assignmentRepository;
+    private final TechnicianRepository technicianRepository;
 
-    public TechnicianController(AssignmentRepository assignmentRepository) {
+    public TechnicianController(AssignmentRepository assignmentRepository, TechnicianRepository technicianRepository) {
         this.assignmentRepository = assignmentRepository;
+        this.technicianRepository = technicianRepository;
     }
 
     /**
-     * 기사 배정 등록 (구체적 방문 시간 LocalTime 수신)
+     * 기사 배정 등록 (POST /api/assignments)
      */
-    @PostMapping
+    @PostMapping("/assignments")
     public ResponseEntity<Assignment> assignTechnician(@RequestBody AssignmentRequest request) {
         if (assignmentRepository.findByRequestId(request.getRequestId()).isPresent()) {
             return ResponseEntity.badRequest().build();
         }
 
-        LocalDateTime assignedAt = LocalDateTime.of(request.getDate(), request.getTime());
+        // TimeSlot에 따른 기준 시작 시간 설정
+        LocalDateTime assignedAt;
+        if (request.getTimeSlot() == TimeSlot.MORNING) {
+            assignedAt = request.getDate().atTime(9, 0, 0);
+        } else {
+            assignedAt = request.getDate().atTime(13, 0, 0);
+        }
 
         Assignment assignment = new Assignment();
         assignment.setRequestId(request.getRequestId());
@@ -47,12 +56,46 @@ public class TechnicianController {
     }
 
     /**
-     * 전체 배정 목록 조회
+     * 전체 배정 목록 조회 (GET /api/assignments)
      */
-    @GetMapping
+    @GetMapping("/assignments")
     public ResponseEntity<List<Assignment>> getAllAssignments() {
         List<Assignment> assignments = assignmentRepository.findAll();
         return ResponseEntity.ok(assignments);
+    }
+
+    /**
+     * 방문 가능 기사 조회 (GET /api/assignments/technicians/available)
+     */
+    @GetMapping("/assignments/technicians/available")
+    public ResponseEntity<List<Technician>> getAvailableTechnicians(
+            @RequestParam String region,
+            @RequestParam String productType,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam TimeSlot timeSlot) {
+
+        // 오전 / 오후 시간대 범위 설정 (오전: 09:00 ~ 12:00, 오후: 13:00 ~ 18:00)
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+
+        if (timeSlot == TimeSlot.MORNING) {
+            startTime = date.atTime(9, 0, 0);
+            endTime = date.atTime(12, 0, 0);
+        } else {
+            startTime = date.atTime(13, 0, 0);
+            endTime = date.atTime(18, 0, 0);
+        }
+
+        // 레포지토리 메서드에 시간 범위 전달
+        List<Technician> technicians = technicianRepository.findAvailableTechnicians(region, productType, startTime, endTime);
+        return ResponseEntity.ok(technicians);
+    }
+
+    /**
+     * 시간대 구분용 Enum (프로젝트 내 별도 파일로 존재할 경우 생략 가능)
+     */
+    public enum TimeSlot {
+        MORNING, AFTERNOON
     }
 
     /**
@@ -65,7 +108,7 @@ public class TechnicianController {
     public static class AssignmentRequest {
         private Long requestId;
         private Long technicianId;
-        private LocalDate date; // 방문/접수 날짜 (예: "2026-10-25")
-        private LocalTime time; // 접수처 지정 방문 시간 (예: "10:30:00" 또는 "10:30")
+        private LocalDate date;
+        private TimeSlot timeSlot; // 구체적 시간 대신 TimeSlot 수신
     }
 }
