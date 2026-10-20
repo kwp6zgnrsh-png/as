@@ -1,71 +1,61 @@
 package com.example.technician_server.controller;
 
-import com.example.technician_server.common.TimeSlot;
 import com.example.technician_server.domain.Assignment;
-import com.example.technician_server.domain.Technician;
 import com.example.technician_server.repository.AssignmentRepository;
-import com.example.technician_server.repository.TechnicianRepository;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalTime;
 
 @RestController
-@RequestMapping("/api")
-@RequiredArgsConstructor
+@RequestMapping("/api/assignments")
 public class TechnicianController {
 
-    private final TechnicianRepository technicianRepository;
     private final AssignmentRepository assignmentRepository;
 
-    @GetMapping("/technicians/available")
-    public ResponseEntity<List<Technician>> getAvailableTechnicians(
-            @RequestParam String region,
-            @RequestParam String productType,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam TimeSlot timeSlot) {
-
-        // 오전 / 오후 시간대 범위 설정 (오전: 09:00 ~ 12:00, 오후: 13:00 ~ 18:00)
-        LocalDateTime startTime;
-        LocalDateTime endTime;
-
-        if (timeSlot == TimeSlot.MORNING) {
-            startTime = date.atTime(9, 0, 0);
-            endTime = date.atTime(12, 0, 0);
-        } else {
-            startTime = date.atTime(13, 0, 0);
-            endTime = date.atTime(18, 0, 0);
-        }
-
-        // 수정된 레포지토리 메서드에 시간 범위까지 함께 전달
-        List<Technician> technicians = technicianRepository.findAvailableTechnicians(region, productType, startTime, endTime);
-        return ResponseEntity.ok(technicians);
+    public TechnicianController(AssignmentRepository assignmentRepository) {
+        this.assignmentRepository = assignmentRepository;
     }
 
-    @PostMapping("/assignments")
+    @PostMapping
     public ResponseEntity<Assignment> assignTechnician(@RequestBody AssignmentRequest request) {
         if (assignmentRepository.findByRequestId(request.getRequestId()).isPresent()) {
             return ResponseEntity.badRequest().build();
         }
 
+        // 요청받은 날짜(date)와 구체적인 시간(time)을 조합하여 저장
+        LocalDateTime assignedAt = LocalDateTime.of(request.getDate(), request.getTime());
+
         Assignment assignment = new Assignment();
         assignment.setRequestId(request.getRequestId());
         assignment.setTechnicianId(request.getTechnicianId());
         assignment.setStatus("ASSIGNED");
-        assignment.setAssignedAt(LocalDateTime.now());
+        assignment.setAssignedAt(assignedAt);
 
         Assignment saved = assignmentRepository.save(assignment);
         return ResponseEntity.ok(saved);
     }
 
+    /**
+     * 기사 배정 요청 DTO (TimeSlot 대신 구체적인 time 받기)
+     */
     @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class AssignmentRequest {
         private Long requestId;
         private Long technicianId;
+        private LocalDate date; // 방문/접수 날짜 (예: "2026-10-25")
+        private LocalTime time; // 접수처 지정 방문 시간 (예: "10:30:00" 또는 "10:30")
     }
 }
