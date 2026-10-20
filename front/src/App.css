@@ -109,6 +109,7 @@
 }
 .submit-button:hover { background: #24b000; }
 .submit-button:active { background: #209c00; }
+.submit-button:disabled { background: #aaa; cursor: not-allowed; }
 .submission-notice { max-width: 520px; margin: 16px 0 0; color: #555; font-size: 14px; text-align: center; line-height: 1.7; }
 .submission-notice:empty { display: none; }
 .privacy-dialog { width: min(480px, calc(100% - 40px)); max-height: calc(100% - 48px); padding: 30px; border: 1px solid #ccc; color: #333; line-height: 1.7; }

@@ -4,12 +4,13 @@ import java.time.LocalDateTime;
 
 public record RepairResponse(
         Long requestId,
-        Long productId,
+        String requestNo,
         String customerName,
         String phone,
+        Long productId,
         String region,
-        LocalDateTime visitDateTime,
-        String memo,
+        String symptom,
+        Long technicianId,
         String status,
         LocalDateTime createdAt
 ) {
