@@ -37,21 +37,14 @@ public class TechnicianController {
             return ResponseEntity.badRequest().build();
         }
 
-        // TimeSlot에 따른 기준 시작 시간 설정
-        LocalDateTime assignedAt;
-        if (request.getTimeSlot() == TimeSlot.MORNING) {
-            assignedAt = request.getDate().atTime(9, 0, 0);
-        } else {
-            assignedAt = request.getDate().atTime(13, 0, 0);
-        }
-
         Assignment assignment = new Assignment();
         assignment.setRequestId(request.getRequestId());
         assignment.setTechnicianId(request.getTechnicianId());
         assignment.setStatus("ASSIGNED");
-        assignment.setAssignedAt(assignedAt);
+        assignment.setAssignedAt(request.getDate());
 
         Assignment saved = assignmentRepository.save(assignment);
+
         return ResponseEntity.ok(saved);
     }
 
@@ -108,7 +101,7 @@ public class TechnicianController {
     public static class AssignmentRequest {
         private Long requestId;
         private Long technicianId;
-        private LocalDate date;
+        private LocalDateTime date;
         private TimeSlot timeSlot; // 구체적 시간 대신 TimeSlot 수신
     }
 }
