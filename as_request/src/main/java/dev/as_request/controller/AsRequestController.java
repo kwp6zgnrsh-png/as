@@ -7,7 +7,6 @@ import dev.as_request.dto.RepairHistoryRequest;
 import jakarta.validation.Valid;
 import dev.as_request.dto.CreateRepairRequest;
 import dev.as_request.dto.ProductResponse;
-import dev.as_request.dto.RepairResponse;
 import dev.as_request.service.ProductService;
 import dev.as_request.service.RepairService;
 
@@ -21,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {"http://localhost:5174", "http://127.0.0.1:5173"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173, http://172.21.26.98:5173"})
 public class AsRequestController {
 
     private final ProductService productService;

@@ -115,12 +115,11 @@ function App() {
           : `AS 신청을 처리하지 못했습니다. (오류 ${response.status})`)
       }
 
-      if (!result || (result.requestId == null && !result.requestNo)) {
-        throw new Error('접수 응답을 확인할 수 없습니다. 접수 내역을 확인해 주세요.')
+      form.reset()
+      for (const element of form.elements) {
+        element.setCustomValidity?.('')
       }
-
-      const receipt = result.requestNo ? `접수번호: ${result.requestNo}` : `접수 ID: ${result.requestId}`
-      setNotice(`AS 접수가 완료되었습니다. ${receipt}`)
+      setNotice('AS 접수가 완료되었습니다.')
       setNoticeType('success')
     } catch (error) {
       setNotice(error instanceof TypeError

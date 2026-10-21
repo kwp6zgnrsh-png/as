@@ -13,8 +13,6 @@ import dev.as_request.exception.AssignmentFailedException;
 import dev.as_request.exception.ProductServiceException;
 import dev.as_request.exception.TechnicianNotFoundException;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
