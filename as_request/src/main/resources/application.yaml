@@ -4,16 +4,16 @@ spring:
   application:
     name: as_request
   datasource:
-    url: jdbc:mysql://localhost:3306/as_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/as_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
       mode: never
 
 product-service:
-  base-url: ${PRODUCT_SERVICE_URL:http://172.21.33.68:8080}
+  base-url: ${PRODUCT_SERVICE_URL:http://localhost:8080}
 
 technician-service:
-  base-url: ${PRODUCT_SERVICE_URL:http://172.21.33.43:8082}
+  base-url: ${TECHNICIAN_SERVICE_URL:http://localhost:8082}
