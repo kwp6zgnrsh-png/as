@@ -1,0 +1,68 @@
+# 서버 B(제품)와 서버 C(기사)를 각자 전용 MySQL과 함께 실행하는 초안입니다.
+# 사용 전: 각 서버 폴더에서 .\gradlew.bat bootJar -x test 로 jar를 먼저 만드세요.
+# 실행: deploy 폴더에서  docker compose --env-file .env up -d --build
+services:
+  product-db:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${PRODUCT_DB_NAME}
+      MYSQL_USER: ${PRODUCT_DB_USER}
+      MYSQL_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - product_data:/var/lib/mysql
+      - ./db/product_db.sql:/docker-entrypoint-initdb.d/01-product.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  technician-db:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${TECHNICIAN_DB_NAME}
+      MYSQL_USER: ${TECHNICIAN_DB_USER}
+      MYSQL_PASSWORD: ${TECHNICIAN_DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - technician_data:/var/lib/mysql
+      - ./db/technician_db.sql:/docker-entrypoint-initdb.d/01-technician.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  product:
+    build: ../product
+    environment:
+      DB_URL: jdbc:mysql://product-db:3306/${PRODUCT_DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+      DB_USERNAME: ${PRODUCT_DB_USER}
+      DB_PASSWORD: ${PRODUCT_DB_PASSWORD}
+    depends_on:
+      product-db:
+        condition: service_healthy
+    ports:
+      - "8081:8080"   # 로컬 확인용. EC2 배포에서는 밖으로 열지 않고 삭제합니다.
+
+  technician:
+    build: ../technician
+    environment:
+      DB_HOST: technician-db
+      DB_NAME: ${TECHNICIAN_DB_NAME}
+      DB_USER: ${TECHNICIAN_DB_USER}
+      DB_PASSWORD: ${TECHNICIAN_DB_PASSWORD}
+    depends_on:
+      technician-db:
+        condition: service_healthy
+    ports:
+      - "8082:8082"   # 로컬 확인용. EC2 배포에서는 밖으로 열지 않고 삭제합니다.
+
+volumes:
+  product_data:
+  technician_data:
